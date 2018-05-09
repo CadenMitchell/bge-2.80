@@ -1,0 +1,114 @@
+/*
+ * ***** BEGIN GPL LICENSE BLOCK *****
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *
+ * The Original Code is Copyright (C) 2005 Blender Foundation.
+ * All rights reserved.
+ *
+ * The Original Code is: all of this file.
+ *
+ * Contributor(s): Brecht Van Lommel.
+ *
+ * ***** END GPL LICENSE BLOCK *****
+ */
+
+/** \file GPU_framebuffer.h
+ *  \ingroup gpu
+ */
+
+#ifndef __GPU_FRAMEBUFFER_H__
+#define __GPU_FRAMEBUFFER_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct GPUFrameBuffer GPUFrameBuffer;
+typedef struct GPUOffScreen GPUOffScreen;
+struct GPUTexture;
+
+/* GPU Framebuffer
+ * - this is a wrapper for an OpenGL framebuffer object (FBO). in practice
+ *   multiple FBO's may be created, to get around limitations on the number
+ *   of attached textures and the dimension requirements.
+ * - after any of the GPU_framebuffer_* functions, GPU_framebuffer_restore must
+ *   be called before rendering to the window framebuffer again */
+
+void GPU_texture_bind_as_framebuffer(struct GPUTexture *tex);
+
+GPUFrameBuffer *GPU_framebuffer_create(void);
+bool GPU_framebuffer_texture_attach(GPUFrameBuffer *fb, struct GPUTexture *tex, int slot, int mip);
+bool GPU_framebuffer_texture_layer_attach(
+        GPUFrameBuffer *fb, struct GPUTexture *tex, int slot, int layer, int mip);
+bool GPU_framebuffer_texture_cubeface_attach(
+        GPUFrameBuffer *fb, struct GPUTexture *tex, int slot, int face, int mip);
+void GPU_framebuffer_texture_detach(struct GPUTexture *tex);
+void GPU_framebuffer_bind(GPUFrameBuffer *fb);
+void GPU_framebuffer_slots_bind(GPUFrameBuffer *fb, int slot);
+void GPU_framebuffer_texture_unbind(GPUFrameBuffer *fb, struct GPUTexture *tex);
+void GPU_framebuffer_free(GPUFrameBuffer *fb);
+bool GPU_framebuffer_check_valid(GPUFrameBuffer *fb, char err_out[256]);
+
+void GPU_framebuffer_bind_no_save(GPUFrameBuffer *fb, int slot);
+
+bool GPU_framebuffer_bound(GPUFrameBuffer *fb);
+
+void GPU_framebuffer_restore(void);
+void GPU_framebuffer_blur(
+        GPUFrameBuffer *fb, struct GPUTexture *tex,
+        GPUFrameBuffer *blurfb, struct GPUTexture *blurtex);
+
+void GPU_framebuffer_blit(
+        GPUFrameBuffer *fb_read, int read_slot,
+        GPUFrameBuffer *fb_write, int write_slot, bool use_depth, bool use_stencil);
+
+void GPU_framebuffer_recursive_downsample(
+        GPUFrameBuffer *fb, struct GPUTexture *tex, int num_iter,
+        void (*callback)(void *userData, int level), void *userData);
+
+/********************Game engine*******************/
+void GPU_framebuffer_bind_all_attachments(GPUFrameBuffer *fb);
+int GPU_framebuffer_color_bindcode(const GPUFrameBuffer *fb);
+struct GPUTexture *GPU_framebuffer_color_texture(const GPUFrameBuffer *fb);
+struct GPUTexture *GPU_framebuffer_depth_texture(const GPUFrameBuffer *fb);
+void GPU_framebuffer_mipmap_texture(GPUFrameBuffer *fb);
+void GPU_framebuffer_unmipmap_texture(GPUFrameBuffer *fb);
+/****************End of Game engine****************/
+
+/* GPU OffScreen
+ * - wrapper around framebuffer and texture for simple offscreen drawing
+ * - changes size if graphics card can't support it */
+
+GPUOffScreen *GPU_offscreen_create(int width, int height, int samples,
+        bool depth, bool high_bitdepth, char err_out[256]);
+void GPU_offscreen_free(GPUOffScreen *ofs);
+void GPU_offscreen_bind(GPUOffScreen *ofs, bool save);
+void GPU_offscreen_unbind(GPUOffScreen *ofs, bool restore);
+void GPU_offscreen_read_pixels(GPUOffScreen *ofs, int type, void *pixels);
+void GPU_offscreen_blit(GPUOffScreen *ofs, int x, int y);
+int GPU_offscreen_width(const GPUOffScreen *ofs);
+int GPU_offscreen_height(const GPUOffScreen *ofs);
+struct GPUTexture *GPU_offscreen_color_texture(const GPUOffScreen *ofs);
+
+void GPU_offscreen_viewport_data_get(
+        GPUOffScreen *ofs,
+        GPUFrameBuffer **r_fb, struct GPUTexture **r_color, struct GPUTexture **r_depth);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  /* __GPU_FRAMEBUFFER_H__ */
